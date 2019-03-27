@@ -1,0 +1,17 @@
+databases:
+  - 
+
+postgres:
+  host: ''
+  username: ''
+  password: ''
+
+aws:
+  access_key_id: ''
+  secret_access_key: ''
+  region: ''
+  bucket: ''
+
+slack:
+  channel: ''
+  webhook: ''
