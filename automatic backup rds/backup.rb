@@ -1,8 +1,18 @@
-require 'dotenv'
 require 'yaml'
 require 'aws-sdk-s3'
+require 'json'
 
-config = YAML.load_file('config.yml')
+config = YAML.load_file('./scripts/automatic_backup/config.yml')
+
+payload = {
+  channel: config['slack']['channel'],
+  text: 'Backup started',
+  icon_emoji: config['slack']['airplane_departure']
+}.to_json
+
+cmd = 'curl -X POST --data-urlencode '
+cmd += "'payload=#{payload}' #{config['slack']['webhook']}"
+system(cmd)
 
 # Backup databases to .dump files
 backuped_files = []
@@ -19,6 +29,16 @@ config['databases'].each do |dbname|
   backuped_files << backup_file
 end
 
+payload = {
+  channel: config['slack']['channel'],
+  text: 'Backup being comprressed',
+  icon_emoji: config['slack']['airplane']
+}.to_json
+
+cmd = 'curl -X POST --data-urlencode '
+cmd += "'payload=#{payload}' #{config['slack']['webhook']}"
+system(cmd)
+
 compressed_files = []
 backuped_files.each do |bkp_file|
   # Generate compressed file
@@ -30,6 +50,16 @@ backuped_files.each do |bkp_file|
   compressed_files << zipfile_name
 end
 
+payload = {
+  channel: config['slack']['channel'],
+  text: 'Backup upload S3 started',
+  icon_emoji: config['slack']['airplane']
+}.to_json
+
+cmd = 'curl -X POST --data-urlencode '
+cmd += "'payload=#{payload}' #{config['slack']['webhook']}"
+system(cmd)
+
 # Upload backups to S3
 compressed_files.each do |comp_file|
   file = open("tmp/#{comp_file}")
@@ -40,22 +70,23 @@ compressed_files.each do |comp_file|
     secret_access_key: config['aws']['secret_access_key']
   )
   obj = s3.bucket(config['aws']['bucket']).object(comp_file)
-  send_message_to_slack(comp_file) if obj.upload_file(file)
+  obj.upload_file(file)
 end
 
-def send_message_to_slack(filename)
-  payload = {
-    channel: config['slack']['channel'],
-    text: "Backup #{filename} finalized with successful"
-  }.to_json
+payload = {
+  channel: config['slack']['channel'],
+  text: "Backup finalized with successful",
+  icon_emoji: config['slack']['airplane_arriving']
+}.to_json
 
-  cmd = 'curl -X POST --data-urlencode '
-  cmd += "'payload=#{payload}' #{config['slack']['webhook']}"
-  system(cmd)
-end
+cmd = 'curl -X POST --data-urlencode '
+cmd += "'payload=#{payload}' #{config['slack']['webhook']}"
+system(cmd)
 
 # Delete Files
 backuped_files.map { |f| system("rm tmp/#{f}") }
 compressed_files.map { |f| system("rm tmp/#{f}") }
 
 puts 'Backup finished'
+
+33 19 * * * /bin/bash -l -c 'ruby ./scripts/automatic_backup/backup.rb'
