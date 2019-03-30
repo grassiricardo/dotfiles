@@ -20,10 +20,12 @@ config['databases'].each do |dbname|
   timestamp = Time.now.strftime('%Y%m%d%H%M%S%L')
   backup_file = "#{dbname}_#{timestamp}.sql"
 
-  cmd = "PGPASSWORD=#{config['postgres']['password']} pg_dump --no-owner"
-  cmd += " -h #{config['postgres']['host']}"
-  cmd += " --user=#{config['postgres']['username']}"
-  cmd += " #{dbname} > tmp/#{backup_file}"
+  cmd = " PGPASSWORD=#{config['postgres']['password']} pg_dump "
+  cmd += " --host #{config['postgres']['host']} "
+  cmd += ' --port 5432 '
+  cmd += " --username #{config['postgres']['username']} "
+  cmd += " --verbose --role #{config['postgres']['username']} "
+  cmd += " --format=c --blobs #{dbname} > tmp/#{backup_file}"
 
   system(cmd)
   backuped_files << backup_file
@@ -75,7 +77,7 @@ end
 
 payload = {
   channel: config['slack']['channel'],
-  text: "Backup finalized with successful",
+  text: 'Backup finalized with successful',
   icon_emoji: config['slack']['airplane_arriving']
 }.to_json
 
@@ -88,5 +90,3 @@ backuped_files.map { |f| system("rm tmp/#{f}") }
 compressed_files.map { |f| system("rm tmp/#{f}") }
 
 puts 'Backup finished'
-
-33 19 * * * /bin/bash -l -c 'ruby ./scripts/automatic_backup/backup.rb'

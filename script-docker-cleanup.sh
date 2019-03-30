@@ -23,4 +23,4 @@ curl -X POST --data-urlencode 'payload={"channel": "#reports", "text": "Run Clea
 
 sudo chmod 777 scripts/docker-cleanup.sh
 
-0 2 * * * ./scripts/docker-cleanup.sh
+0 2 * * * sudo ./scripts/docker-cleanup.sh
